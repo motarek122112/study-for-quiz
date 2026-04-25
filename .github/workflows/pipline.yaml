@@ -1,1 +1,85 @@
+on:
+  push: 
+    branches: main
 
+  repository_dispatch:
+
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      MLFOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI}}
+
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: set python
+        uses: actions/setup-python@v5
+        with:
+          python_version : "3.10"
+
+      - name: dependecies
+        run: |
+          pip install -r requirments.txt
+          pip install dvc mlflow
+
+      - name: pull data
+        run: |
+          dvc pull
+
+      - name: train
+        run: python train.py
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name : model-info
+          path : model_info.txt
+
+  ddeploy:
+    runs-on: ubuntu-latest
+    env:
+      MLFLOW_TRACKING_URI: ${{secrets.MLFLOW_TRACKING_URI}}
+
+    steps:
+
+      - name: checkout
+        uses: actions/checkout@v4
+
+      
+      - name: python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      - name: dependincies
+        run: |
+          pip install -r requirments.txt
+          pip install mlflow
+
+      - name: ownload artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: model-info
+
+
+      - name: check_threshold
+        run: python check_threshold.py
+
+      - name: mock deploy
+        run: |
+          echo "Building Docker image for Run ID: $(cat model_info.txt)"
+
+
+
+
+
+
+
+
+
+
+
+    
