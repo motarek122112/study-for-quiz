@@ -12,5 +12,8 @@ with mlflow.start_run() as run:
     with open("model_info.txt", "w") as f:
         f.write(run_id)
 
+    with open("accuracy.txt", "w") as f:
+        f.write(str(accuracy))
+
     print(f"Run ID: {run_id}")
     print(f"Accuracy: {accuracy}")
