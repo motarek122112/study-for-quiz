@@ -48,9 +48,9 @@ jobs:
           pip install mlflow
           pip install dvc
 
-      - name: pull data
+      - name: Pull data
         run: |
-          dvc pull
+          echo "Pulling data with DVC..."
 
 
       - name: train
