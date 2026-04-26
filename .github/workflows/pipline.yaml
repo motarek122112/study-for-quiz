@@ -65,8 +65,10 @@ jobs:
       - name: upload model info
         uses: actions/upload-artifact@v4
         with:
-          name: model-info
-          path: model_info.txt
+          name: model-artifacts
+          path: |
+            model_info.txt
+            accuracy.txt
 
       - name: Upload MLflow runs
         uses: actions/upload-artifact@v4
@@ -74,6 +76,12 @@ jobs:
           name: mlruns
           path: mlruns
 
+          
+      - name: Create error log if training fails
+        if: failure()
+        run: echo "Training failed. Check configuration and logs." > error_logs.txt
+
+        
       - name: upload error logs if failure
         if: failure()
         uses: actions/upload-artifact@v4
@@ -110,7 +118,7 @@ jobs:
       - name: download model info
         uses: actions/download-artifact@v4
         with:
-          name: model-info
+          name: model-artifacts
 
       - name: Download MLflow runs
         uses: actions/download-artifact@v4
