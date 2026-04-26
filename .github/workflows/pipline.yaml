@@ -67,12 +67,6 @@ jobs:
           name: model-info
           path: model_info.txt
 
-      - name: upload model info
-        uses: actions/upload-artifact@v4
-        with:
-          name: model-info
-          path: model_info.txt
-
       - name: Upload MLflow runs
         uses: actions/upload-artifact@v4
         with:
