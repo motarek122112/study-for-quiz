@@ -1,8 +1,13 @@
-from python:3.10-slim
-ARG RUN_ID
-run pip istall -r requirments.txt
-copy . .
-run echo "preparing container...."
-run echo "download the model for run ID: ${RUN-ID}"
-cmd ["sh","-c","echo model container is ready for run ID: ${RUN-ID}"]
+FROM python:3.10-slim
 
+ARG RUN_ID
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+RUN echo "Preparing container for Run ID: ${RUN_ID}"
+
+CMD ["python", "-c", "print('Model container is running')"]
