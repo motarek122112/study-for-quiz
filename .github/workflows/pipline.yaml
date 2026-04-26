@@ -5,8 +5,9 @@ on:
       - main
 
   repository_dispatch:
+
 env:
-  MLFLOW_TRACKING_URI: ${{secrets.MLFLOW_TRACKING_URI}}
+  MLFLOW_TRACKING_URI: file:./mlruns
   
 jobs:
   lint:
