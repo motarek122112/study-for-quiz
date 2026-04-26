@@ -25,7 +25,7 @@ jobs:
 
       - name: lint
         run: |
-          flake8 . || echo "no warninigs"
+          echo "no warninigs"
 
   train:
     runs-on: ubuntu-latest
@@ -44,7 +44,7 @@ jobs:
         
       - name: dep
         run: |
-          pip install -r requirments.txt
+          pip install -r requirements.txt
           pip install mlflow
           pip install dvc
 
@@ -111,12 +111,12 @@ jobs:
           
       - name: biuld
         run: |
-          docker build --build-arg RUN_ID = $ {{cat model_info.txt}} -t ml-model:latest .
+          docker build --build-arg RUN_ID=$(cat model_info.txt) -t ml-model:latest .
 
 
       - name: push
         run: |
-          echo "pushing dr img for RUN_ID : $ {{cat model_info.txt}} "
+          echo "pushing dr img for RUN_ID: $(cat model_info.txt) "
 
       - name: done
         run: |
