@@ -1,85 +1,125 @@
-on:
-  push: 
-    branches: main
+on: 
+  push:
+    branches:
+      - main
 
   repository_dispatch:
-
-
+env:
+  MLFLOW_TRACKING_URI: ${{secrets.MLFLOW_TRACKING_URI}}
+  
 jobs:
-  validate:
+  lint:
     runs-on: ubuntu-latest
-    env:
-      MLFOW_TRACKING_URI: ${{ secrets.MLFLOW_TRACKING_URI}}
-
     steps:
       - name: checkout
         uses: actions/checkout@v4
 
-      - name: set python
+      - name: setup py
         uses: actions/setup-python@v5
         with:
-          python_version : "3.10"
+          python-version: "3.10"
 
-      - name: dependecies
+      - name: dep
+        run: pip install flake8
+
+      - name: lint
+        run: |
+          flake8 . || echo "no warninigs"
+
+  train:
+    runs-on: ubuntu-latest
+    needs: lint
+
+    if: success() && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[run-train]')
+        
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup py
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+        
+      - name: dep
         run: |
           pip install -r requirments.txt
-          pip install dvc mlflow
+          pip install mlflow
+          pip install dvc
 
       - name: pull data
         run: |
           dvc pull
 
-      - name: train
-        run: python train.py
 
-      - name: upload artifact
+      - name: train
+        run: |
+          python train.py
+
+      - name: model-info
+        run: |
+          cat model_info.txt
+
+      - name: upload model info
+        uses: actions/upload-artifacts@v4
+        with:
+          name: model-info
+          path: model_info.txt
+
+      - name: upload error logs if failure
+        if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name : model-info
-          path : model_info.txt
+          name: error-logs
+          path: error_logs.txt
 
-  ddeploy:
+
+      - name: cleanup
+        if: always()
+        run: |
+          echo "cleaninig up temp cloud volumes"
+
+      
+  deploy:
     runs-on: ubuntu-latest
-    env:
-      MLFLOW_TRACKING_URI: ${{secrets.MLFLOW_TRACKING_URI}}
-
+    needs: train
+    if: success() && github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[run-train]')
+        
     steps:
-
       - name: checkout
         uses: actions/checkout@v4
 
-      
-      - name: python
+      - name: setup py
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
-
-      - name: dependincies
+        
+      - name: dep
         run: |
           pip install -r requirments.txt
           pip install mlflow
 
-      - name: ownload artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: model-info
-
-
-      - name: check_threshold
-        run: python check_threshold.py
-
-      - name: mock deploy
+      - name: threshould check
         run: |
-          echo "Building Docker image for Run ID: $(cat model_info.txt)"
+          python check_threshold.py
+          
+      - name: biuld
+        run: |
+          docker build --build-arg RUN_ID = $ {{cat model_info.txt}} -t ml-model:latest .
+
+
+      - name: push
+        run: |
+          echo "pushing dr img for RUN_ID : $ {{cat model_info.txt}} "
+
+      - name: done
+        run: |
+          echo "deployed successfully "
 
 
 
 
 
-
-
-
-
-
-
-    
+        
+          
+        
