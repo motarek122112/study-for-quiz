@@ -1,5 +1,5 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
+from pyspark.sql.functions import col, trim, when
 from pyspark.ml import Pipeline
 from pyspark.ml.feature import StringIndexer, OneHotEncoder, VectorAssembler
 from pyspark.ml.classification import DecisionTreeClassifier, RandomForestClassifier, LogisticRegression
@@ -10,6 +10,8 @@ from pyspark.ml.tuning import ParamGridBuilder, TrainValidationSplit
 spark = SparkSession.builder \
     .appName("Telco Customer Churn Prediction") \
     .getOrCreate()
+
+spark.sparkContext.setLogLevel("ERROR")
 
 
 print("\n========== Part 1: Data Exploration ==========")
@@ -23,32 +25,53 @@ df = spark.read.csv(
 df.show(5)
 df.printSchema()
 
-print("Total rows:", df.count())
+print("Total Rows:", df.count())
 
 df.groupBy("Churn").count().show()
 
+
 df = df.drop("customerID")
-df = df.withColumn("TotalCharges", col("TotalCharges").cast("double"))
+
+df = df.withColumn(
+    "TotalCharges",
+    when(trim(col("TotalCharges")) == "", None)
+    .otherwise(trim(col("TotalCharges")).cast("double"))
+)
+
 df = df.na.drop()
 
-label_col = "Churn"
+print("Rows After Cleaning:", df.count())
+
 
 categorical_cols = [
-    "gender", "Partner", "Dependents", "PhoneService",
-    "MultipleLines", "InternetService", "OnlineSecurity",
-    "OnlineBackup", "DeviceProtection", "TechSupport",
-    "StreamingTV", "StreamingMovies", "Contract",
-    "PaperlessBilling", "PaymentMethod"
+    "gender",
+    "Partner",
+    "Dependents",
+    "PhoneService",
+    "MultipleLines",
+    "InternetService",
+    "OnlineSecurity",
+    "OnlineBackup",
+    "DeviceProtection",
+    "TechSupport",
+    "StreamingTV",
+    "StreamingMovies",
+    "Contract",
+    "PaperlessBilling",
+    "PaymentMethod"
 ]
 
 numeric_cols = [
-    "SeniorCitizen", "tenure", "MonthlyCharges", "TotalCharges"
+    "SeniorCitizen",
+    "tenure",
+    "MonthlyCharges",
+    "TotalCharges"
 ]
 
-print("Categorical columns:")
+print("Categorical Columns:")
 print(categorical_cols)
 
-print("Numeric columns:")
+print("Numeric Columns:")
 print(numeric_cols)
 
 
@@ -56,8 +79,7 @@ print("\n========== Part 2: Preprocessing ==========")
 
 label_indexer = StringIndexer(
     inputCol="Churn",
-    outputCol="label",
-    handleInvalid="keep"
+    outputCol="label"
 )
 
 index_cols = [c + "_index" for c in categorical_cols]
@@ -82,11 +104,11 @@ assembler = VectorAssembler(
 
 train_df, test_df = df.randomSplit([0.8, 0.2], seed=42)
 
-print("Train rows:", train_df.count())
-print("Test rows:", test_df.count())
+print("Train Rows:", train_df.count())
+print("Test Rows:", test_df.count())
 
 
-print("\n========== Part 3 and 4: Models and Evaluation ==========")
+print("\n========== Part 3 and Part 4: Models and Evaluation ==========")
 
 accuracy_eval = MulticlassClassificationEvaluator(
     labelCol="label",
@@ -143,7 +165,7 @@ dt_result = evaluate_model(dt_predictions, "Decision Tree")
 rf = RandomForestClassifier(
     labelCol="label",
     featuresCol="features",
-    numTrees=50,
+    numTrees=30,
     maxDepth=5,
     seed=42
 )
@@ -208,8 +230,8 @@ rf_tuning_pipeline = Pipeline(stages=[
 ])
 
 param_grid = ParamGridBuilder() \
-    .addGrid(rf_tuning.numTrees, [10, 30, 50]) \
-    .addGrid(rf_tuning.maxDepth, [3, 5, 8]) \
+    .addGrid(rf_tuning.numTrees, [10, 20]) \
+    .addGrid(rf_tuning.maxDepth, [3, 5]) \
     .build()
 
 tvs = TrainValidationSplit(
